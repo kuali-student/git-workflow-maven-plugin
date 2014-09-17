@@ -23,6 +23,7 @@ import org.eclipse.jgit.lib.Config;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.ReceiveCommand;
+import org.kohsuke.github.GHBranch;
 import org.kohsuke.github.GHCommitPointer;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHPullRequest;
@@ -64,9 +65,14 @@ public class FetchOpenPullRequestsMojo extends AbstractMojo {
 	 * The pull requests are resolved from this location.
 	 * 
 	 */
-	@Parameter(required=true, property="git-flow.sourceGithubUserAndRepo")
-	private String sourceGithubUserAndRepo;
+	@Parameter(required=true, property="git-flow.sourceGithubUser")
+	private String sourceGithubUser;
 	
+	@Parameter(required=true, property="git-flow.sourceGithubRepo")
+	private String sourceGithubRepo;
+	
+	@Parameter(required=true, property="git-flow.sourceGithubBranch")
+	private String sourceGithubBranch;
 	
 	/**
 	 * @param project the project to set
@@ -74,6 +80,17 @@ public class FetchOpenPullRequestsMojo extends AbstractMojo {
 	public void setProject(MavenProject project) {
 		this.project = project;
 	}
+	
+	
+
+	/**
+	 * @param sourceGithubBranch the sourceGithubBranch to set
+	 */
+	public void setSourceGithubBranch(String sourceGithubBranch) {
+		this.sourceGithubBranch = sourceGithubBranch;
+	}
+
+
 
 	/**
 	 * @param externalCGitCommand the externalCGitCommand to set
@@ -89,11 +106,20 @@ public class FetchOpenPullRequestsMojo extends AbstractMojo {
 		this.projectRepository = projectRepository;
 	}
 
+	
+
 	/**
-	 * @param sourceGithubUserAndRepo the sourceGithubUserAndRepo to set
+	 * @param sourceGithubUser the sourceGithubUser to set
 	 */
-	public void setSourceGithubUserAndRepo(String sourceGithubUserAndRepo) {
-		this.sourceGithubUserAndRepo = sourceGithubUserAndRepo;
+	public void setSourceGithubUser(String sourceGithubUser) {
+		this.sourceGithubUser = sourceGithubUser;
+	}
+
+	/**
+	 * @param sourceGithubRepo the sourceGithubRepo to set
+	 */
+	public void setSourceGithubRepo(String sourceGithubRepo) {
+		this.sourceGithubRepo = sourceGithubRepo;
 	}
 
 	/**
@@ -117,7 +143,11 @@ public class FetchOpenPullRequestsMojo extends AbstractMojo {
 			
 			GitHub github = GitHub.connect(); 
 			
-			GHRepository repo = github.getRepository(sourceGithubUserAndRepo);
+			String targetRepository = sourceGithubUser + "/" + sourceGithubRepo;
+			
+			GHRepository repo = github.getRepository(targetRepository);
+			
+			GHBranch repoBaseBranch = repo.getBranches().get(sourceGithubBranch);
 			
 			List<GHPullRequest> openPullRequests = repo.getPullRequests(GHIssueState.OPEN);
 			
@@ -134,7 +164,13 @@ public class FetchOpenPullRequestsMojo extends AbstractMojo {
 					repositoryToPullRequestsMap.put(remoteRepository, refs);
 				}
 				
+				GHCommitPointer base = pullRequest.getBase();
 				
+				if (!sourceGithubBranch.equals(base.getRef())) {
+					getLog().info("Skipping pull request: " + pullRequest.getNumber() + " because it does not apply to branch: " + sourceGithubBranch);
+					continue; 
+				}
+
 				String refName = head.getRef();
 				
 				String commitId = head.getSha();
@@ -173,12 +209,15 @@ public class FetchOpenPullRequestsMojo extends AbstractMojo {
 				
 				projectRepository.getConfig().setStringList("remote", remoteRepositoryName, "fetch", refSpecs);
 				
+				projectRepository.getConfig().save();
+				
+				// deep fetch because we want to know which are based in the current branch.
+				ExternalGitUtils.fetch (externalCGitCommand, projectRepository, remoteRepositoryName, 1, System.out);
 				
 			}
 			
-			projectRepository.getConfig().save();
 			
-			ExternalGitUtils.fetchAll (externalCGitCommand, projectRepository, 1, System.out);
+			
 			
 			List<ReceiveCommand> commands = new ArrayList<ReceiveCommand>();
 			
