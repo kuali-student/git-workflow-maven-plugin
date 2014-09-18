@@ -26,8 +26,12 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.kohsuke.github.GHCommit;
+import org.kohsuke.github.GHCommitPointer;
 import org.kohsuke.github.GHCommitState;
 import org.kohsuke.github.GHCommitStatus;
+import org.kohsuke.github.GHIssueComment;
+import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.PagedIterable;
@@ -38,17 +42,19 @@ import org.kuali.student.git.model.GitRepositoryUtils;
 /**
  * @author ocleirig
  * 
- * Read and Create commit statuses using github's commit status api.
+ * Read and Leave comments on a pull request in github.
  * 
- * When CI is successful it will use this mojo to create a status indicating a successful build.
+ * This is for reading dev and functional signoff in support of automatic pull request merging.
  * 
- * This data will then be used by the FetchOpenPullRequestsMojo when downloading applicable branches.
+ * The premise is that if the pull request builds and runs the smoke test aft's and then
+ * the pull request is incorporated into an integration build that works and there has been sign-off
+ * then we can merge down the pull request to trunk.
  * 
  *
  */
-@Mojo (name="githubStatus")
-@Execute (goal="githubStatus", lifecycle="initialize")
-public class GithubStatusMojo extends AbstractMojo {
+@Mojo (name="githubComments")
+@Execute (goal="githubComments", lifecycle="initialize")
+public class GithubCommentsMojo extends AbstractMojo {
 
 	@Component
 	private MavenProject project;
@@ -76,8 +82,8 @@ public class GithubStatusMojo extends AbstractMojo {
 	@Parameter(required=true, property="git-flow.sourceGithubRepo")
 	private String sourceGithubRepo;
 	
-	@Parameter(required=true, property="git-flow.targetCommitId")
-	private String targetCommitId;
+	@Parameter(required=true, property="git-flow.pullRequestNumber")
+	private int pullRequestNumber;
 	
 	
 	/**
@@ -107,17 +113,12 @@ public class GithubStatusMojo extends AbstractMojo {
 		this.sourceGithubRepo = sourceGithubRepo;
 	}
 
-	
-
 	/**
-	 * @param targetCommitId the targetCommitId to set
+	 * @param pullRequestNumber the pullRequestNumber to set
 	 */
-	public void setTargetCommitId(String targetCommitId) {
-		this.targetCommitId = targetCommitId;
+	public void setPullRequestNumber(int pullRequestNumber) {
+		this.pullRequestNumber = pullRequestNumber;
 	}
-
-
-
 
 	/**
 	 * @param project the project to set
@@ -125,9 +126,6 @@ public class GithubStatusMojo extends AbstractMojo {
 	public void setProject(MavenProject project) {
 		this.project = project;
 	}
-	
-	
-
 	
 	/**
 	 * @param externalCGitCommand the externalCGitCommand to set
@@ -140,7 +138,7 @@ public class GithubStatusMojo extends AbstractMojo {
 	/**
 	 * 
 	 */
-	public GithubStatusMojo() {
+	public GithubCommentsMojo() {
 		// TODO Auto-generated constructor stub
 	}
 
@@ -160,17 +158,16 @@ public class GithubStatusMojo extends AbstractMojo {
 			
 			GHRepository repo = github.getRepository(targetRepository);
 			
-			GithubApiUtils githubUtils = new GithubApiUtils(repo, getLog());
+			GHPullRequest pullRequest = repo.getPullRequest(pullRequestNumber);
 			
-			githubUtils.registerCommitStatus(targetCommitId, GHCommitState.PENDING, null, "testing status", "verify-merge-to-trunk-pull-request");
+			PagedIterable<GHIssueComment> pullRequestComments = pullRequest.listComments();
 			
-			PagedIterable<GHCommitStatus> currentCommitStatuses = repo.listCommitStatuses(targetCommitId);
-			
-			for (GHCommitStatus ghCommitStatus : currentCommitStatuses) {
-				getLog().info(String.format ("status: (context, state) = (%s, %s)", ghCommitStatus.getContext(), ghCommitStatus.getState().name() ));
+			for (GHIssueComment comment : pullRequestComments) {
+				
+				getLog().info("login: " + comment.getUser().getLogin());
+				getLog().info("body: " + comment.getBody());
+				
 			}
-			
-			
 			
 		} catch (IOException e) {
 			throw new MojoExecutionException("FetchOpenPullRequestsMojo failed: ", e);

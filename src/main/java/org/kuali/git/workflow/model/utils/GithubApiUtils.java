@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.kuali.git.workflow;
+package org.kuali.git.workflow.model.utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,6 +18,7 @@ import org.kohsuke.github.GHCommitStatus;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.PagedIterable;
+import org.kuali.git.workflow.PullRequestStatus;
 
 /**
  * @author ocleirig
