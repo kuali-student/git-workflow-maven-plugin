@@ -3,10 +3,6 @@
  */
 package org.kuali.git.workflow;
 
-import java.util.Collections;
-import java.util.List;
-
-import org.kohsuke.github.GHCommitPointer;
 import org.kohsuke.github.GHCommitStatus;
 import org.kohsuke.github.PagedIterable;
 
