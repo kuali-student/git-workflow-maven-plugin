@@ -28,7 +28,18 @@
 		<project.compile.source>1.7</project.compile.source>
 		<project.compile.target>1.7</project.compile.target>
 		<github-api.version>1.58</github-api.version>
+		
+		<!-- parent overrides -->
+		<project.scm.vendor>git</project.scm.vendor>
 	</properties>
+	
+	
+	<scm>
+		<url>https://github.com/kuali-student/git-workflow-maven-plugin</url>
+		<connection>scm:git:git@github.com:/kuali-student/git-workflow-maven-plugin.git</connection>
+    	<developerConnection>scm:git:git@github.com:/kuali-student/git-workflow-maven-plugin.git</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
 	<developers>
 		<developer>
 			<id>jcaddel</id>
