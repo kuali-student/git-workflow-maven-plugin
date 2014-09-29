@@ -66,15 +66,21 @@ public class ListOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 	@Parameter(required=true, property="git-flow.sourceGithubBranch")
 	private String sourceGithubBranch;
 	
-	@Parameter (required=true, property="git-flow.reportFileName", defaultValue="open-pull-requests.dat")
-	private String reportFileName;
-	
+	@Parameter (required=true, property="git-flow.reportFileNamePrefix", defaultValue="open-pull-requests")
+	private String reportFileNamePrefix;
 	
 	/**
-	 * @param reportFileName the reportFileName to set
+	 * @return the reportFileNamePrefix
 	 */
-	public void setReportFileName(String reportFileName) {
-		this.reportFileName = reportFileName;
+	public String getReportFileNamePrefix() {
+		return reportFileNamePrefix;
+	}
+
+	/**
+	 * @param reportFileNamePrefix the reportFileNamePrefix to set
+	 */
+	public void setReportFileNamePrefix(String reportFileNamePrefix) {
+		this.reportFileNamePrefix = reportFileNamePrefix;
 	}
 
 	/**
@@ -128,7 +134,6 @@ public class ListOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 			
 			List<GHPullRequest> openPullRequests = repo.getPullRequests(GHIssueState.OPEN);
 			
-			PrintWriter pw = new PrintWriter(new File (reportFileName).getAbsoluteFile());
 			
 			for (GHPullRequest pullRequest : openPullRequests) {
 				
@@ -170,12 +175,22 @@ public class ListOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 					getLog().info("pull-request-" +pullRequest.getNumber() + " added to report.");
 				}
 				
-				pw.println(String.format ("%d:%s", pullRequest.getNumber(), pullRequest.getHead().getSha()));
+				/*
+				 * Emit a file per pull request because this is easier to consume in Jenkins.
+				 * 
+				 * For every matching file, invoke one build.
+				 * For every property file, invoke one build.
+				 */
+				PrintWriter pw = new PrintWriter(new File (reportFileNamePrefix + "." + pullRequest.getNumber()).getAbsoluteFile());
 				
+				pw.println(String.format ("PULL_REQUEST_NUMBER=%d", pullRequest.getNumber()));
+				pw.println(String.format ("PULL_REQUEST_COMMIT_ID=%s", pullRequest.getHead().getSha()));
+				
+				pw.close();
 				
 			}
 			
-			pw.close();
+			
 			
 			
 			

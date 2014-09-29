@@ -43,7 +43,12 @@ public class TestCLAVerification {
 	@Test
 	public void testCLAVerification() throws IOException {
 		
-		GitHub github = GitHub.connect(); 
+		GitHub github;
+		try {
+			github = GitHub.connect();
+		} catch (IOException e) {
+			github = GitHub.connectAnonymously();
+		} 
 		
 		GHRepository repo = github.getRepository("kuali-student/ks-development");
 		
