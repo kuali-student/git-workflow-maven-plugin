@@ -42,9 +42,6 @@ import org.kuali.student.git.model.GitRepositoryUtils;
 @Execute (goal="listOpenPullRequests", lifecycle="initialize")
 public class ListOpenPullRequestsMojo extends AbstractMojo {
 
-	@Component
-	private MavenProject project;
-	
 	/**
 	 * Certain operations are slow for JGit so this allows us to run them using C git.
 	 * 
@@ -52,8 +49,6 @@ public class ListOpenPullRequestsMojo extends AbstractMojo {
 	@Parameter(property="git-flow.cGitCommand", defaultValue="git")
 	protected String externalCGitCommand;
 
-	private Repository projectRepository;
-	
 	/**
 	 * For example: kuali/ks-development.
 	 * 
@@ -82,17 +77,6 @@ public class ListOpenPullRequestsMojo extends AbstractMojo {
 		this.reportFileName = reportFileName;
 	}
 
-
-
-	/**
-	 * @param project the project to set
-	 */
-	public void setProject(MavenProject project) {
-		this.project = project;
-	}
-	
-	
-
 	/**
 	 * @param sourceGithubBranch the sourceGithubBranch to set
 	 */
@@ -100,23 +84,12 @@ public class ListOpenPullRequestsMojo extends AbstractMojo {
 		this.sourceGithubBranch = sourceGithubBranch;
 	}
 
-
-
 	/**
 	 * @param externalCGitCommand the externalCGitCommand to set
 	 */
 	public void setExternalCGitCommand(String externalCGitCommand) {
 		this.externalCGitCommand = externalCGitCommand;
 	}
-
-	/**
-	 * @param projectRepository the projectRepository to set
-	 */
-	public void setProjectRepository(Repository projectRepository) {
-		this.projectRepository = projectRepository;
-	}
-
-	
 
 	/**
 	 * @param sourceGithubUser the sourceGithubUser to set
@@ -147,9 +120,15 @@ public class ListOpenPullRequestsMojo extends AbstractMojo {
 		
 		try {
 			
-			projectRepository = GitRepositoryUtils.buildFileRepository(project.getBasedir(), false, false);
+			GitHub github = null;
 			
-			GitHub github = GitHub.connect(); 
+			try {
+				
+				github = GitHub.connect(); 
+			}
+			catch (IOException e) {
+				github = GitHub.connectAnonymously();
+			}
 			
 			String targetRepository = sourceGithubUser + "/" + sourceGithubRepo;
 			
