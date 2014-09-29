@@ -54,7 +54,7 @@ import org.kuali.student.git.model.GitRepositoryUtils;
  */
 @Mojo (name="githubComments")
 @Execute (goal="githubComments", lifecycle="initialize")
-public class GithubCommentsMojo extends AbstractMojo {
+public class GithubCommentsMojo extends AbstractGithubAuthorizedMojo {
 
 	@Component
 	private MavenProject project;
@@ -152,7 +152,7 @@ public class GithubCommentsMojo extends AbstractMojo {
 			
 			projectRepository = GitRepositoryUtils.buildFileRepository(project.getBasedir(), false, false);
 			
-			GitHub github = GitHub.connect(); 
+			GitHub github = super.authorizeFromCredentials();
 			
 			String targetRepository = sourceGithubUser + "/" + sourceGithubRepo;
 			

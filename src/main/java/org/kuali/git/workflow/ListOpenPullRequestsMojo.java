@@ -40,7 +40,7 @@ import org.kuali.student.git.model.GitRepositoryUtils;
  */
 @Mojo (name="listOpenPullRequests")
 @Execute (goal="listOpenPullRequests", lifecycle="initialize")
-public class ListOpenPullRequestsMojo extends AbstractMojo {
+public class ListOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 
 	/**
 	 * Certain operations are slow for JGit so this allows us to run them using C git.
@@ -120,15 +120,7 @@ public class ListOpenPullRequestsMojo extends AbstractMojo {
 		
 		try {
 			
-			GitHub github = null;
-			
-			try {
-				
-				github = GitHub.connect(); 
-			}
-			catch (IOException e) {
-				github = GitHub.connectAnonymously();
-			}
+			GitHub github = super.authorizeFromCredentials();
 			
 			String targetRepository = sourceGithubUser + "/" + sourceGithubRepo;
 			

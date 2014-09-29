@@ -48,7 +48,7 @@ import org.kuali.student.git.model.GitRepositoryUtils;
  */
 @Mojo (name="githubStatus")
 @Execute (goal="githubStatus", lifecycle="initialize")
-public class GithubStatusMojo extends AbstractMojo {
+public class GithubStatusMojo extends AbstractGithubAuthorizedMojo {
 
 	@Component
 	private MavenProject project;
@@ -154,7 +154,7 @@ public class GithubStatusMojo extends AbstractMojo {
 			
 			projectRepository = GitRepositoryUtils.buildFileRepository(project.getBasedir(), false, false);
 			
-			GitHub github = GitHub.connect(); 
+			GitHub github = super.authorizeFromCredentials();
 			
 			String targetRepository = sourceGithubUser + "/" + sourceGithubRepo;
 			

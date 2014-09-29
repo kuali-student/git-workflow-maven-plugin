@@ -43,7 +43,7 @@ import org.kuali.student.git.utils.ExternalGitUtils;
  */
 @Mojo (name="fetchOpenPullRequests")
 @Execute (goal="fetchOpenPullRequests", lifecycle="initialize")
-public class FetchOpenPullRequestsMojo extends AbstractMojo {
+public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 
 	@Component
 	private MavenProject project;
@@ -141,7 +141,7 @@ public class FetchOpenPullRequestsMojo extends AbstractMojo {
 			
 			Map<GHRepository, List<PullRequestRefs>>repositoryToPullRequestsMap= new HashMap<GHRepository, List<PullRequestRefs>>();
 			
-			GitHub github = GitHub.connect(); 
+			GitHub github = super.authorizeFromCredentials();
 			
 			String targetRepository = sourceGithubUser + "/" + sourceGithubRepo;
 			
