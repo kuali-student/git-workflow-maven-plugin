@@ -5,6 +5,7 @@ package org.kuali.git.workflow;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,6 +15,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHCommit.File;
 import org.kohsuke.github.GHCompare;
 import org.kohsuke.github.GHPullRequest;
@@ -109,15 +111,19 @@ public class IdentifyPullRequestChangesThroughApiMojo extends
 			
 			Set<String>changes = new HashSet<String>();
 			
-			for (File file : compare.getFiles()) {
+			for (File file : getFiles(compare)) {
 				
 				changes.add(file.getFileName());
 			}
 			
+			java.io.File reportsBase = new java.io.File("target");
+			
+			reportsBase.mkdirs();
+			
 			Set<String> sqlModuleChanges = reportOnTopLevelDirectoriesWithSQLChanges(changes);
 			
 			if (sqlModuleChanges.size() > 0) {
-				PrintWriter pw = new PrintWriter("target/ks-impex.dat");
+				PrintWriter pw = new PrintWriter(new java.io.File (reportsBase, "ks-impex-changes.dat"));
 				
 				pw.println("PULL_REQUEST_NUMBER=" + specificPullRequest);
 				
@@ -127,14 +133,14 @@ public class IdentifyPullRequestChangesThroughApiMojo extends
 			Set<String> moduleChanges = reportOnTopLevelDirectoryChanges(changes);
 			
 			for (String module : moduleChanges) {
-				PrintWriter pw = new PrintWriter("target/ks-" + module + "-unit-test.dat");
+				PrintWriter pw = new PrintWriter(new java.io.File(reportsBase, module + "-changes.dat"));
 				
 				pw.println("PULL_REQUEST_NUMBER=" + specificPullRequest);
 				pw.println("MODULE=" + module);
 				pw.close();
 			}
 			
-			getLog().info("changes to : " + StringUtils.join(changes, ", "));
+			getLog().info("Changes to " + changes.size() + " files between pull request base and head.");
 			
 			getLog().info("Top Level Directory Changes to : " + StringUtils.join(moduleChanges, ", "));
 			
@@ -149,6 +155,28 @@ public class IdentifyPullRequestChangesThroughApiMojo extends
 
 
 
+
+	private GHCommit.File[] getFiles(GHCompare compare) throws MojoExecutionException {
+//		once github-api 1.59 is released use this instead
+//		return compare.getFiles();
+		
+		try {
+			Field f = compare.getClass().getDeclaredField("files");
+			
+			f.setAccessible(true);
+			
+			return (File[]) f.get(compare);
+			
+		} catch (NoSuchFieldException e) {
+			throw new MojoExecutionException("failed to read compare.files using reflection", e);
+		} catch (SecurityException e) {
+			throw new MojoExecutionException("failed to read compare.files using reflection", e);
+		} catch (IllegalArgumentException e) {
+			throw new MojoExecutionException("failed to read compare.files using reflection", e);
+		} catch (IllegalAccessException e) {
+			throw new MojoExecutionException("failed to read compare.files using reflection", e);
+		}
+	}
 
 	private Set<String> reportOnTopLevelDirectoriesWithSQLChanges(
 			Set<String> changes) {
