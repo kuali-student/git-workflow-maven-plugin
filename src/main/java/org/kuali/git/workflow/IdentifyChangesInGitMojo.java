@@ -3,12 +3,12 @@
  */
 package org.kuali.git.workflow;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
@@ -16,7 +16,6 @@ import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
@@ -35,9 +34,9 @@ import org.kuali.student.git.model.GitRepositoryUtils;
  * This is useful for routing a set of changes (i.e. if impex is required more time will be required)
  *
  */
-@Mojo (name="identifyChanges")
-@Execute (goal="identifyChanges", lifecycle="initialize")
-public class IdentifyChangesMojo extends AbstractMojo {
+@Mojo (name="identifyChangesInGit")
+@Execute (goal="identifyChangesInGit", lifecycle="initialize")
+public class IdentifyChangesInGitMojo extends AbstractGitRepositoryAwareMojo {
 
 	@Component
 	private MavenProject project;
@@ -49,8 +48,6 @@ public class IdentifyChangesMojo extends AbstractMojo {
 	@Parameter(property="git-flow.cGitCommand", defaultValue="git")
 	protected String externalCGitCommand;
 
-	private Repository projectRepository;
-	
 	@Parameter (required = true, property="git-flow.sourceBranch")
 	private String sourceBranch;
 	
@@ -82,16 +79,6 @@ public class IdentifyChangesMojo extends AbstractMojo {
 	}
 
 	/**
-	 * @param projectRepository the projectRepository to set
-	 */
-	public void setProjectRepository(Repository projectRepository) {
-		this.projectRepository = projectRepository;
-	}
-
-	
-
-	
-	/**
 	 * @param sourceBranch the sourceBranch to set
 	 */
 	public void setSourceBranch(String sourceBranch) {
@@ -114,7 +101,7 @@ public class IdentifyChangesMojo extends AbstractMojo {
 	/**
 	 * 
 	 */
-	public IdentifyChangesMojo() {
+	public IdentifyChangesInGitMojo() {
 		// TODO Auto-generated constructor stub
 	}
 
@@ -126,7 +113,7 @@ public class IdentifyChangesMojo extends AbstractMojo {
 		
 		try {
 			
-			projectRepository = GitRepositoryUtils.buildFileRepository(project.getBasedir(), false, false);
+			Repository projectRepository = GitRepositoryUtils.buildFileRepository(new File (project.getBasedir(), super.repositoryRelativePath), false, false);
 			
 			Ref sourceRef = projectRepository.getRef(sourceBranch);
 			

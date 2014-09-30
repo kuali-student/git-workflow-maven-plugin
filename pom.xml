@@ -27,7 +27,7 @@
 		<repository.tools.version>0.0.3</repository.tools.version>
 		<project.compile.source>1.7</project.compile.source>
 		<project.compile.target>1.7</project.compile.target>
-		<github-api.version>1.58</github-api.version>
+		<github-api.version>1.59-SNAPSHOT</github-api.version>
 		
 		<!-- parent overrides -->
 		<project.scm.vendor>git</project.scm.vendor>

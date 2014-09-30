@@ -3,6 +3,7 @@
  */
 package org.kuali.git.workflow;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
+import org.kuali.common.util.execute.StorePropertiesExecutable;
 import org.kuali.git.workflow.model.PullRequestRefs;
 import org.kuali.student.git.model.GitRepositoryUtils;
 import org.kuali.student.git.utils.ExternalGitUtils;
@@ -43,7 +45,7 @@ import org.kuali.student.git.utils.ExternalGitUtils;
  */
 @Mojo (name="fetchOpenPullRequests")
 @Execute (goal="fetchOpenPullRequests", lifecycle="initialize")
-public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
+public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 
 	@Component
 	private MavenProject project;
@@ -55,7 +57,7 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 	@Parameter(property="git-flow.cGitCommand", defaultValue="git")
 	protected String externalCGitCommand;
 
-	private Repository projectRepository;
+	
 	
 	/**
 	 * For example: kuali/ks-development.
@@ -74,6 +76,17 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 	@Parameter(required=true, property="git-flow.sourceGithubBranch")
 	private String sourceGithubBranch;
 	
+	@Parameter(property="git-flow.specificPullRequest")
+	private Integer specificPullRequest;
+	
+	/**
+	 * This was the head commit id of the pull request when this job was triggered.
+	 * We just check in the specific pull request case that this still aligns with what the api
+	 * is telling us.
+	 */
+	@Parameter (property="git-flow.expectedPullRequestHeadCommitId")
+	private String expectedPullRequestHeadCommitId;
+	
 	/**
 	 * @param project the project to set
 	 */
@@ -81,7 +94,16 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 		this.project = project;
 	}
 	
-	
+
+	/**
+	 * @param repositoryRelativePath the repositoryRelativePath to set
+	 */
+	public void setRepositoryRelativePath(String repositoryRelativePath) {
+		this.repositoryRelativePath = repositoryRelativePath;
+	}
+
+
+
 
 	/**
 	 * @param sourceGithubBranch the sourceGithubBranch to set
@@ -100,15 +122,6 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 	}
 
 	/**
-	 * @param projectRepository the projectRepository to set
-	 */
-	public void setProjectRepository(Repository projectRepository) {
-		this.projectRepository = projectRepository;
-	}
-
-	
-
-	/**
 	 * @param sourceGithubUser the sourceGithubUser to set
 	 */
 	public void setSourceGithubUser(String sourceGithubUser) {
@@ -121,6 +134,8 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 	public void setSourceGithubRepo(String sourceGithubRepo) {
 		this.sourceGithubRepo = sourceGithubRepo;
 	}
+	
+	
 
 	/**
 	 * 
@@ -129,6 +144,15 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 		// TODO Auto-generated constructor stub
 	}
 
+	/**
+	 * @param specificPullRequest the specificPullRequest to set
+	 */
+	public void setSpecificPullRequest(Integer specificPullRequest) {
+		this.specificPullRequest = specificPullRequest;
+	}
+
+
+
 	/* (non-Javadoc)
 	 * @see org.apache.maven.plugin.Mojo#execute()
 	 */
@@ -136,8 +160,10 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		
 		try {
-			
-			projectRepository = GitRepositoryUtils.buildFileRepository(project.getBasedir(), false, false);
+			/*
+			 * Create the repository for download of the pull requests.
+			 */
+			Repository projectRepository = GitRepositoryUtils.buildFileRepository(new File(project.getBasedir(), repositoryRelativePath), true, false);
 			
 			Map<GHRepository, List<PullRequestRefs>>repositoryToPullRequestsMap= new HashMap<GHRepository, List<PullRequestRefs>>();
 			
@@ -147,38 +173,31 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 			
 			GHRepository repo = github.getRepository(targetRepository);
 			
-			GHBranch repoBaseBranch = repo.getBranches().get(sourceGithubBranch);
-			
-			List<GHPullRequest> openPullRequests = repo.getPullRequests(GHIssueState.OPEN);
-			
-			for (GHPullRequest pullRequest : openPullRequests) {
+			if (specificPullRequest != null && specificPullRequest > 0) {
 				
-				GHCommitPointer head = pullRequest.getHead();
+				getLog().info("Fetching specific pull request " + specificPullRequest);
 				
-				GHRepository remoteRepository = head.getRepository();
+				GHPullRequest pullRequest = repo.getPullRequest(specificPullRequest);
 				
-				List<PullRequestRefs>refs = repositoryToPullRequestsMap.get(remoteRepository);
+				if (pullRequest == null)
+					throw new MojoFailureException("No pull request found in " + targetRepository + " for pr-" + specificPullRequest);
 				
-				if (refs == null) {
-					refs = new ArrayList<PullRequestRefs>();
-					repositoryToPullRequestsMap.put(remoteRepository, refs);
-				}
-				
-				GHCommitPointer base = pullRequest.getBase();
-				
-				if (!sourceGithubBranch.equals(base.getRef())) {
-					getLog().info("Skipping pull request: " + pullRequest.getNumber() + " because it does not apply to branch: " + sourceGithubBranch);
-					continue; 
-				}
-
-				String refName = head.getRef();
-				
-				String commitId = head.getSha();
-				
-				refs.add (new PullRequestRefs(pullRequest.getNumber(), remoteRepository, refName, commitId));
-				
+				if (!expectedPullRequestHeadCommitId.equals(pullRequest.getHead().getSha()))
+						throw new MojoFailureException("Pull Request " + pullRequest.getNumber() + " has been updated and its head is at " + pullRequest.getHead().getSha() + " instead of the expected " + expectedPullRequestHeadCommitId);
+						
+				storePullRequest (pullRequest, repositoryToPullRequestsMap);
 			}
-			
+			else {
+				getLog().info("Fetching all open pull requests");
+				
+				List<GHPullRequest> openPullRequests = repo.getPullRequests(GHIssueState.OPEN);
+				
+				for (GHPullRequest pullRequest : openPullRequests) {
+					
+					storePullRequest (pullRequest, repositoryToPullRequestsMap);
+					
+				}
+			}
 			
 			/*
 			 * We have to retrieve the commit graph pointed at by the head revision of the branch for each pull request.
@@ -194,7 +213,7 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 				
 				String remoteRepositoryName = remoteRepo.getFullName();
 				
-				if (!remoteExists(remoteRepositoryName))
+				if (!remoteExists(remoteRepositoryName, projectRepository))
 					projectRepository.getConfig().setString("remote", remoteRepositoryName, "url", remoteRepo.getGitTransportUrl());
 				
 				List<String>refSpecs = new ArrayList<String>();
@@ -215,9 +234,6 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 				ExternalGitUtils.fetch (externalCGitCommand, projectRepository, remoteRepositoryName, 1, System.out);
 				
 			}
-			
-			
-			
 			
 			List<ReceiveCommand> commands = new ArrayList<ReceiveCommand>();
 			
@@ -242,7 +258,38 @@ public class FetchOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 
 	}
 
-	private boolean remoteExists(String name) {
+	private boolean storePullRequest(GHPullRequest pullRequest, Map<GHRepository, List<PullRequestRefs>> repositoryToPullRequestsMap) {
+		GHCommitPointer head = pullRequest.getHead();
+		
+		GHRepository remoteRepository = head.getRepository();
+		
+		List<PullRequestRefs>refs = repositoryToPullRequestsMap.get(remoteRepository);
+		
+		if (refs == null) {
+			refs = new ArrayList<PullRequestRefs>();
+			repositoryToPullRequestsMap.put(remoteRepository, refs);
+		}
+		
+		GHCommitPointer base = pullRequest.getBase();
+		
+		if (!sourceGithubBranch.equals(base.getRef())) {
+			getLog().info("Skipping pull request: " + pullRequest.getNumber() + " because it does not apply to branch: " + sourceGithubBranch);
+			return false;
+		}
+
+		String refName = head.getRef();
+		
+		String commitId = head.getSha();
+		
+		refs.add (new PullRequestRefs(pullRequest.getNumber(), remoteRepository, refName, commitId));
+		
+		return true;
+		
+	}
+
+
+
+	private boolean remoteExists(String name, Repository projectRepository) {
 		
 		Config projectConfig = projectRepository.getConfig();
 		
