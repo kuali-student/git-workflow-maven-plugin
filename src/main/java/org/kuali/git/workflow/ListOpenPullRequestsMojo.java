@@ -43,13 +43,6 @@ import org.kuali.student.git.model.GitRepositoryUtils;
 public class ListOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 
 	/**
-	 * Certain operations are slow for JGit so this allows us to run them using C git.
-	 * 
-	 */
-	@Parameter(property="git-flow.cGitCommand", defaultValue="git")
-	protected String externalCGitCommand;
-
-	/**
 	 * For example: kuali/ks-development.
 	 * 
 	 * The name of the github user or organization [slash] the name of the git repository.
@@ -88,13 +81,6 @@ public class ListOpenPullRequestsMojo extends AbstractGithubAuthorizedMojo {
 	 */
 	public void setSourceGithubBranch(String sourceGithubBranch) {
 		this.sourceGithubBranch = sourceGithubBranch;
-	}
-
-	/**
-	 * @param externalCGitCommand the externalCGitCommand to set
-	 */
-	public void setExternalCGitCommand(String externalCGitCommand) {
-		this.externalCGitCommand = externalCGitCommand;
 	}
 
 	/**

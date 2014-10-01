@@ -50,9 +50,6 @@ import org.kuali.student.git.model.GitRepositoryUtils;
 @Execute (goal="githubStatus", lifecycle="initialize")
 public class GithubStatusMojo extends AbstractGithubAuthorizedMojo {
 
-	@Component
-	private MavenProject project;
-	
 	/**
 	 * Certain operations are slow for JGit so this allows us to run them using C git.
 	 * 
@@ -116,19 +113,6 @@ public class GithubStatusMojo extends AbstractGithubAuthorizedMojo {
 		this.targetCommitId = targetCommitId;
 	}
 
-
-
-
-	/**
-	 * @param project the project to set
-	 */
-	public void setProject(MavenProject project) {
-		this.project = project;
-	}
-	
-	
-
-	
 	/**
 	 * @param externalCGitCommand the externalCGitCommand to set
 	 */
@@ -141,7 +125,6 @@ public class GithubStatusMojo extends AbstractGithubAuthorizedMojo {
 	 * 
 	 */
 	public GithubStatusMojo() {
-		// TODO Auto-generated constructor stub
 	}
 
 	/* (non-Javadoc)

@@ -38,16 +38,6 @@ import org.kuali.student.git.model.GitRepositoryUtils;
 @Execute (goal="identifyChangesInGit", lifecycle="initialize")
 public class IdentifyChangesInGitMojo extends AbstractGitRepositoryAwareMojo {
 
-	@Component
-	private MavenProject project;
-	
-	/**
-	 * Certain operations are slow for JGit so this allows us to run them using C git.
-	 * 
-	 */
-	@Parameter(property="git-flow.cGitCommand", defaultValue="git")
-	protected String externalCGitCommand;
-
 	@Parameter (required = true, property="git-flow.sourceBranch")
 	private String sourceBranch;
 	
@@ -61,23 +51,8 @@ public class IdentifyChangesInGitMojo extends AbstractGitRepositoryAwareMojo {
 	@Parameter (property="git-flow.changesReportTargetDirectory", defaultValue="target")
 	private String changesReportTargetDirectory;
 	
-	/**
-	 * @param project the project to set
-	 */
-	public void setProject(MavenProject project) {
-		this.project = project;
-	}
 	
 	
-
-	
-	/**
-	 * @param externalCGitCommand the externalCGitCommand to set
-	 */
-	public void setExternalCGitCommand(String externalCGitCommand) {
-		this.externalCGitCommand = externalCGitCommand;
-	}
-
 	/**
 	 * @param sourceBranch the sourceBranch to set
 	 */

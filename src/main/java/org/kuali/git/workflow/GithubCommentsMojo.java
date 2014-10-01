@@ -56,9 +56,6 @@ import org.kuali.student.git.model.GitRepositoryUtils;
 @Execute (goal="githubComments", lifecycle="initialize")
 public class GithubCommentsMojo extends AbstractGithubAuthorizedMojo {
 
-	@Component
-	private MavenProject project;
-	
 	/**
 	 * Certain operations are slow for JGit so this allows us to run them using C git.
 	 * 
@@ -120,13 +117,6 @@ public class GithubCommentsMojo extends AbstractGithubAuthorizedMojo {
 		this.pullRequestNumber = pullRequestNumber;
 	}
 
-	/**
-	 * @param project the project to set
-	 */
-	public void setProject(MavenProject project) {
-		this.project = project;
-	}
-	
 	/**
 	 * @param externalCGitCommand the externalCGitCommand to set
 	 */

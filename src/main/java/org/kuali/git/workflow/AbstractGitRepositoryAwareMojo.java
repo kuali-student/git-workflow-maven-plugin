@@ -16,6 +16,13 @@ import org.apache.maven.plugins.annotations.Parameter;
 public abstract class AbstractGitRepositoryAwareMojo extends
 		AbstractGithubAuthorizedMojo {
 
+	/**
+	 * Certain operations are slow for JGit so this allows us to run them using C git.
+	 * 
+	 */
+	@Parameter(property="git-flow.cGitCommand", defaultValue="git")
+	protected String externalCGitCommand;
+	
 	/*
 	 * 
 	 */
@@ -29,13 +36,15 @@ public abstract class AbstractGitRepositoryAwareMojo extends
 		super();
 	}
 
-	/**
-	 * @param repositoryRelativePath the repositoryRelativePath to set
-	 */
-	public void setRepositoryRelativePath(String repositoryRelativePath) {
+	public final void setRepositoryRelativePath(String repositoryRelativePath) {
 		this.repositoryRelativePath = repositoryRelativePath;
 	}
 
+	public final void setExternalCGitCommand(String externalCGitCommand) {
+		this.externalCGitCommand = externalCGitCommand;
+	}
+
+	
 	
 
 }

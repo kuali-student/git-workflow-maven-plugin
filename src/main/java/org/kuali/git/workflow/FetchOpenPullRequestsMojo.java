@@ -47,18 +47,6 @@ import org.kuali.student.git.utils.ExternalGitUtils;
 @Execute (goal="fetchOpenPullRequests", lifecycle="initialize")
 public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 
-	@Component
-	private MavenProject project;
-	
-	/**
-	 * Certain operations are slow for JGit so this allows us to run them using C git.
-	 * 
-	 */
-	@Parameter(property="git-flow.cGitCommand", defaultValue="git")
-	protected String externalCGitCommand;
-
-	
-	
 	/**
 	 * For example: kuali/ks-development.
 	 * 
@@ -87,23 +75,6 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 	@Parameter (property="git-flow.expectedPullRequestHeadCommitId")
 	private String expectedPullRequestHeadCommitId;
 	
-	/**
-	 * @param project the project to set
-	 */
-	public void setProject(MavenProject project) {
-		this.project = project;
-	}
-	
-
-	/**
-	 * @param repositoryRelativePath the repositoryRelativePath to set
-	 */
-	public void setRepositoryRelativePath(String repositoryRelativePath) {
-		this.repositoryRelativePath = repositoryRelativePath;
-	}
-
-
-
 
 	/**
 	 * @param sourceGithubBranch the sourceGithubBranch to set
@@ -112,14 +83,6 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 		this.sourceGithubBranch = sourceGithubBranch;
 	}
 
-
-
-	/**
-	 * @param externalCGitCommand the externalCGitCommand to set
-	 */
-	public void setExternalCGitCommand(String externalCGitCommand) {
-		this.externalCGitCommand = externalCGitCommand;
-	}
 
 	/**
 	 * @param sourceGithubUser the sourceGithubUser to set
