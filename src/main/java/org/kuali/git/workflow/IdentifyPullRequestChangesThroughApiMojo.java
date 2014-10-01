@@ -138,9 +138,23 @@ public class IdentifyPullRequestChangesThroughApiMojo extends
 			Set<String> sqlModuleChanges = reportOnTopLevelDirectoriesWithSQLChanges(changes);
 			
 			if (sqlModuleChanges.size() > 0) {
-				PrintWriter pw = new PrintWriter(new java.io.File (reportsBase, "ks-impex-changes.dat"));
+				PrintWriter pw = new PrintWriter(new java.io.File (reportsBase, "sql-changes.dat"));
 				
 				pw.println("PULL_REQUEST_NUMBER=" + specificPullRequest);
+				
+				if (environmentVariablesToInclude != null && environmentVariablesToInclude.size() > 0) {
+					
+					for (String var : environmentVariablesToInclude) {
+						
+						String key = var.trim();
+						
+						String value = System.getenv(key);
+
+						if (value != null) {
+							pw.println(key + "=" + value);
+						}
+					}
+			}
 				
 				pw.close();
 			}
