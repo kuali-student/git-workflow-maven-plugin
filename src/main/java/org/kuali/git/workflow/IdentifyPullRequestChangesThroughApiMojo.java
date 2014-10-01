@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -54,6 +55,14 @@ public class IdentifyPullRequestChangesThroughApiMojo extends
 	private Integer specificPullRequest;
 	
 	/**
+	 * Any variables specified here will be included in the variables written into the files for the downstream jobs.
+	 * 
+	 * Expecting a comma seperated list of string values.
+	 */
+	@Parameter(property="git-flow.environmentVariablesToInclude")
+	private List<String> environmentVariablesToInclude;
+	
+	/**
 	 * @param sourceGithubUser the sourceGithubUser to set
 	 */
 	public void setSourceGithubUser(String sourceGithubUser) {
@@ -79,6 +88,12 @@ public class IdentifyPullRequestChangesThroughApiMojo extends
 	 */
 	public void setSpecificPullRequest(Integer specificPullRequest) {
 		this.specificPullRequest = specificPullRequest;
+	}
+
+	
+	public void setEnvironmentVariablesToInclude(
+			List<String> environmentVariablesToInclude) {
+		this.environmentVariablesToInclude = environmentVariablesToInclude;
 	}
 
 	/**
@@ -137,6 +152,20 @@ public class IdentifyPullRequestChangesThroughApiMojo extends
 				
 				pw.println("PULL_REQUEST_NUMBER=" + specificPullRequest);
 				pw.println("MODULE=" + module);
+				
+				if (environmentVariablesToInclude != null && environmentVariablesToInclude.size() > 0) {
+						
+						for (String var : environmentVariablesToInclude) {
+							
+							String key = var.trim();
+							
+							String value = System.getenv(key);
+
+							if (value != null) {
+								pw.println(key + "=" + value);
+							}
+						}
+				}
 				pw.close();
 			}
 			
