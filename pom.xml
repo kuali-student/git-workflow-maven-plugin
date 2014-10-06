@@ -24,7 +24,7 @@
 	<inceptionYear>2014</inceptionYear>
 	<description>Tooling for managing Kuali Git workflows</description>
 	<properties>
-		<repository.tools.version>0.0.3</repository.tools.version>
+		<repository.tools.version>0.0.4-SNAPSHOT</repository.tools.version>
 		<project.compile.source>1.7</project.compile.source>
 		<project.compile.target>1.7</project.compile.target>
 		<github-api.version>1.58</github-api.version>

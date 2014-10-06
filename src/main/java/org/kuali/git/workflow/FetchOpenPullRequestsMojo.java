@@ -24,8 +24,10 @@ import org.eclipse.jgit.lib.Config;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.transport.ReceiveCommand;
+import org.eclipse.persistence.internal.libraries.asm.util.Traceable;
 import org.kohsuke.github.GHBranch;
 import org.kohsuke.github.GHCommitPointer;
+import org.kohsuke.github.GHCompare;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
@@ -72,9 +74,18 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 	 * We just check in the specific pull request case that this still aligns with what the api
 	 * is telling us.
 	 */
-	@Parameter (property="git-flow.expectedPullRequestHeadCommitId")
+	@Parameter (property="git-flow.expectedPullRequestHeadCommitId", required=true)
 	private String expectedPullRequestHeadCommitId;
-	
+
+	/**
+	 * How deep should we be fetching from the pull request?
+	 * 
+	 * Is auto calculated based on the pull requests being fetched.
+	 * 
+	 * If just one then its based purely on the max of the pull request or the number of commits on the stable branch from the current head to the pull request base.
+	 * 
+	 */
+	private int fetchDepth = -1;
 
 	/**
 	 * @param sourceGithubBranch the sourceGithubBranch to set
@@ -99,12 +110,26 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 	}
 	
 	
+	
+
+	/**
+	 * @param expectedPullRequestHeadCommitId the expectedPullRequestHeadCommitId to set
+	 */
+	public void setExpectedPullRequestHeadCommitId(
+			String expectedPullRequestHeadCommitId) {
+		this.expectedPullRequestHeadCommitId = expectedPullRequestHeadCommitId;
+	}
+
+
 
 	/**
 	 * 
 	 */
 	public FetchOpenPullRequestsMojo() {
-		// TODO Auto-generated constructor stub
+	
+		super();
+		
+		super.createRepository = true;
 	}
 
 	/**
@@ -117,17 +142,16 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 
 
 	/* (non-Javadoc)
-	 * @see org.apache.maven.plugin.Mojo#execute()
+	 * @see org.kuali.git.workflow.AbstractGitRepositoryAwareMojo#onExecute()
 	 */
 	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
+	protected void onExecute() throws MojoExecutionException,
+			MojoFailureException {
 		
 		try {
 			/*
 			 * Create the repository for download of the pull requests.
 			 */
-			Repository projectRepository = GitRepositoryUtils.buildFileRepository(new File(project.getBasedir(), repositoryRelativePath), true, false);
-			
 			Map<GHRepository, List<PullRequestRefs>>repositoryToPullRequestsMap= new HashMap<GHRepository, List<PullRequestRefs>>();
 			
 			GitHub github = super.authorizeFromCredentials();
@@ -148,7 +172,7 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 				if (!expectedPullRequestHeadCommitId.equals(pullRequest.getHead().getSha()))
 						throw new MojoFailureException("Pull Request " + pullRequest.getNumber() + " has been updated and its head is at " + pullRequest.getHead().getSha() + " instead of the expected " + expectedPullRequestHeadCommitId);
 						
-				storePullRequest (pullRequest, repositoryToPullRequestsMap);
+				storePullRequest (repo, sourceGithubBranch, pullRequest, repositoryToPullRequestsMap);
 			}
 			else {
 				getLog().info("Fetching all open pull requests");
@@ -157,7 +181,7 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 				
 				for (GHPullRequest pullRequest : openPullRequests) {
 					
-					storePullRequest (pullRequest, repositoryToPullRequestsMap);
+					storePullRequest (repo, sourceGithubBranch, pullRequest, repositoryToPullRequestsMap);
 					
 				}
 			}
@@ -169,6 +193,14 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 			 * which may be different than what was given in the 
 			 * 
 			 */
+			
+			repository.getConfig().setString("remote", "origin", "url", repo.getGitTransportUrl());
+			repository.getConfig().setString("remote", "origin", "fetch", String.format("refs/heads/%s:refs/remotes/%s/%s", sourceGithubBranch, "origin", sourceGithubBranch));
+			
+			repository.getConfig().save();
+			
+			// deep fetch because we want to know which are based in the current branch.
+			ExternalGitUtils.fetch (externalCGitCommand, repository, "origin", this.fetchDepth, System.out);
 	
 			for (Entry<GHRepository, List<PullRequestRefs>> entry : repositoryToPullRequestsMap.entrySet()) {
 				
@@ -176,8 +208,8 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 				
 				String remoteRepositoryName = remoteRepo.getFullName();
 				
-				if (!remoteExists(remoteRepositoryName, projectRepository))
-					projectRepository.getConfig().setString("remote", remoteRepositoryName, "url", remoteRepo.getGitTransportUrl());
+				if (!remoteExists(remoteRepositoryName, repository))
+					repository.getConfig().setString("remote", remoteRepositoryName, "url", remoteRepo.getGitTransportUrl());
 				
 				List<String>refSpecs = new ArrayList<String>();
 				
@@ -189,12 +221,12 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 					
 				}
 				
-				projectRepository.getConfig().setStringList("remote", remoteRepositoryName, "fetch", refSpecs);
+				repository.getConfig().setStringList("remote", remoteRepositoryName, "fetch", refSpecs);
 				
-				projectRepository.getConfig().save();
+				repository.getConfig().save();
 				
 				// deep fetch because we want to know which are based in the current branch.
-				ExternalGitUtils.fetch (externalCGitCommand, projectRepository, remoteRepositoryName, 1, System.out);
+				ExternalGitUtils.fetch (externalCGitCommand, repository, remoteRepositoryName, this.fetchDepth, System.out);
 				
 			}
 			
@@ -212,7 +244,7 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 				
 			}
 			
-			ExternalGitUtils.batchRefUpdate(externalCGitCommand, projectRepository, commands, System.out);
+			ExternalGitUtils.batchRefUpdate(externalCGitCommand, repository, commands, System.out);
 			
 		} catch (IOException e) {
 			throw new MojoExecutionException("FetchOpenPullRequestsMojo failed: ", e);
@@ -221,7 +253,10 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 
 	}
 
-	private boolean storePullRequest(GHPullRequest pullRequest, Map<GHRepository, List<PullRequestRefs>> repositoryToPullRequestsMap) {
+	
+
+	private boolean storePullRequest(GHRepository mainRepository, String mainBranchName, GHPullRequest pullRequest, Map<GHRepository, List<PullRequestRefs>> repositoryToPullRequestsMap) throws IOException, MojoExecutionException {
+		
 		GHCommitPointer head = pullRequest.getHead();
 		
 		GHRepository remoteRepository = head.getRepository();
@@ -243,6 +278,24 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 		String refName = head.getRef();
 		
 		String commitId = head.getSha();
+		
+		String pullRequestBaseCommitId = pullRequest.getBase().getSha();
+		
+		
+		GHCompare pullRequestCompare = mainRepository.getCompare(pullRequestBaseCommitId, commitId);
+		
+		GHBranch mainBranch = mainRepository.getBranches().get(mainBranchName);
+		
+		if (mainBranch == null)
+			throw new MojoExecutionException("No branch found via the API for: " + mainBranchName);
+		
+		GHCompare mainBranchCompare = mainRepository.getCompare(pullRequestBaseCommitId, mainBranch.getSHA1());
+		
+		int pullRequestDepth = pullRequestCompare.getCommits().length;
+		int mainBranchDepth = mainBranchCompare.getCommits().length;
+		
+		this.fetchDepth = Math.max(this.fetchDepth, pullRequestDepth);
+		this.fetchDepth = Math.max(this.fetchDepth, mainBranchDepth);
 		
 		refs.add (new PullRequestRefs(pullRequest.getNumber(), remoteRepository, refName, commitId));
 		

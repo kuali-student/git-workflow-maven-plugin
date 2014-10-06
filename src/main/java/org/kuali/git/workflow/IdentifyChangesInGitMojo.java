@@ -84,28 +84,27 @@ public class IdentifyChangesInGitMojo extends AbstractGitRepositoryAwareMojo {
 	 * @see org.apache.maven.plugin.Mojo#execute()
 	 */
 	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
+	protected void onExecute() throws MojoExecutionException,
+			MojoFailureException {
 		
 		try {
 			
-			Repository projectRepository = GitRepositoryUtils.buildFileRepository(new File (project.getBasedir(), super.repositoryRelativePath), false, false);
-			
-			Ref sourceRef = projectRepository.getRef(sourceBranch);
+			Ref sourceRef = repository.getRef(sourceBranch);
 			
 			if (sourceRef == null)
 				throw new MojoFailureException("no ref found for sourceBranch: " + sourceBranch);
 			
-			Ref targetRef = projectRepository.getRef(targetBranch);
+			Ref targetRef = repository.getRef(targetBranch);
 			
 			if (targetRef == null)
 				throw new MojoFailureException("no ref found for targetBranch: " + targetBranch);
 			
-			RevWalk rw = new RevWalk (projectRepository);
+			RevWalk rw = new RevWalk (repository);
 			
 			RevCommit sourceCommit = rw.parseCommit(sourceRef.getObjectId());
 			RevCommit targetCommit = rw.parseCommit(targetRef.getObjectId());
 			
-			TreeWalk tw = new TreeWalk(projectRepository);
+			TreeWalk tw = new TreeWalk(repository);
 			
 			tw.addTree(sourceCommit.getTree().getId());
 			tw.addTree(targetCommit.getTree().getId());
