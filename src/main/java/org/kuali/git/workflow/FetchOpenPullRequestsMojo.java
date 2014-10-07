@@ -199,7 +199,6 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 			
 			repository.getConfig().save();
 			
-			// deep fetch because we want to know which are based in the current branch.
 			ExternalGitUtils.fetch (externalCGitCommand, repository, "origin", this.fetchDepth, System.out);
 	
 			for (Entry<GHRepository, List<PullRequestRefs>> entry : repositoryToPullRequestsMap.entrySet()) {
@@ -291,8 +290,9 @@ public class FetchOpenPullRequestsMojo extends AbstractGitRepositoryAwareMojo {
 		
 		GHCompare mainBranchCompare = mainRepository.getCompare(pullRequestBaseCommitId, mainBranch.getSHA1());
 		
-		int pullRequestDepth = pullRequestCompare.getCommits().length;
-		int mainBranchDepth = mainBranchCompare.getCommits().length;
+		// add one to the pull request depth so that it will include the parent commit
+		int pullRequestDepth = pullRequestCompare.getCommits().length + 1;
+		int mainBranchDepth = mainBranchCompare.getCommits().length + 1;
 		
 		this.fetchDepth = Math.max(this.fetchDepth, pullRequestDepth);
 		this.fetchDepth = Math.max(this.fetchDepth, mainBranchDepth);
