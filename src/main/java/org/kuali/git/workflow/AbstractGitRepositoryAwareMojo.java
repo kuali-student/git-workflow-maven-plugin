@@ -48,6 +48,8 @@ public abstract class AbstractGitRepositoryAwareMojo extends
 	protected boolean createRepository;
 	
 	protected boolean bareRepository;
+
+	private File onDiskCredentialsFile;
 	
 	/**
 	 * 
@@ -92,9 +94,9 @@ public abstract class AbstractGitRepositoryAwareMojo extends
 		
 		if (remoteCredentials != null && remoteCredentials.size() > 0) {
 			
-			File tempFile = File.createTempFile("git", "credentials");
+			onDiskCredentialsFile = File.createTempFile("git", "credentials");
 	
-			PrintWriter pw = new PrintWriter(tempFile);
+			PrintWriter pw = new PrintWriter(onDiskCredentialsFile);
 	
 			for (String rc : remoteCredentials) {
 				pw.println(rc);
@@ -102,10 +104,8 @@ public abstract class AbstractGitRepositoryAwareMojo extends
 			
 			pw.close();
 			
-			tempFile.deleteOnExit();
-			
 //			 String fileStore = launcher.isUnix() ? store.getAbsolutePath() : "\\\"" + store.getAbsolutePath() + "\\\"";
-             ExternalGitUtils.setupLocalCredentialHelper(externalCGitCommand, repository, tempFile);
+             ExternalGitUtils.setupLocalCredentialHelper(externalCGitCommand, repository, onDiskCredentialsFile);
              
 //             "config", "--local", "credential.helper", "store --file=" + tempFile.getAbsolutePath());
 		
@@ -113,7 +113,11 @@ public abstract class AbstractGitRepositoryAwareMojo extends
 		
 	}
 	
-	protected void cleanupOnDiskCredentials() {
+	protected void cleanupOnDiskCredentials() throws IOException {
+		
+		ExternalGitUtils.cleanupLocalCredentialHelper(externalCGitCommand, repository);
+		
+		onDiskCredentialsFile.delete();
 		
 	}
 
